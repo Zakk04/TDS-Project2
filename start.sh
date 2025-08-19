@@ -19,46 +19,41 @@ echo "=============================================="
 echo ""
 
 
+# ================= CREATE & ACTIVATE VENV =================
+if [ ! -d "venv" ]; then
+    echo "Creating virtual environment..."
+    python3 -m venv venv
+fi
+
 echo "Activating virtual environment..."
 # Activate venv depending on shell
 source venv/bin/activate
 
-
-# ================= GET CREDENTIALS =================
-# Google API Key
-if [ -n "$GENAI_API_KEY" ]; then
-    read -p "GENAI_API_KEY is already set. Do you want to change it? (y/n): " change_key
-    if [[ "$change_key" =~ ^[Yy]$ ]]; then
-        read -p "Enter your GENAI API key: " GENAI_API_KEY
-    fi
-else
-    read -p "Enter your GENAI API key: " GENAI_API_KEY
-fi
-export GENAI_API_KEY=$GENAI_API_KEY
-
 # ngrok Auth Token
-if [ -n "$NGROK_AUTHTOKEN" ]; then
-    read -p "NGROK_AUTHTOKEN is already set. Do you want to change it? (y/n): " change_ngrok
-    if [[ "$change_ngrok" =~ ^[Yy]$ ]]; then
-        read -p "Enter your ngrok authtoken: " NGROK_AUTH
-    else
-        NGROK_AUTH=$NGROK_AUTHTOKEN
-    fi
-else
-    read -p "Enter your ngrok authtoken: " NGROK_AUTH
+if [ -z "$NGROK_AUTHTOKEN" ]; then
+    read -p "Enter your ngrok authtoken: " NGROK_AUTHTOKEN
 fi
-export NGROK_AUTHTOKEN=$NGROK_AUTH
+export NGROK_AUTHTOKEN=$NGROK_AUTHTOKEN
 
-
+# ================= INSTALL REQUIREMENTS (First time only) =================
+if [ ! -f ".deps_installed" ]; then
+    echo "Installing dependencies from requirements.txt (first time only)..."
+    pip install -r requirements.txt
+    touch .deps_installed
+else
+    echo "Dependencies already installed. Skipping pip install."
+fi
 # ================= INSTALL NGROK =================
 if ! command -v ngrok &> /dev/null; then
+    echo "ngrok not found, installing..."
+    pip install pyngrok
     NGROK_BIN=$(python3 -m pyngrok config get-path)
 else
     NGROK_BIN=$(command -v ngrok)
 fi
 
 # ================= CONFIGURE NGROK =================
-$NGROK_BIN config add-authtoken "$NGROK_AUTH"
+$NGROK_BIN config add-authtoken "$NGROK_AUTHTOKEN"
 
 # ================= DETECT APP FILE =================
 # Default to "app:main" unless a file called main.py exists
@@ -79,9 +74,9 @@ UVICORN_PID=$!
 # Trap Ctrl+C to stop uvicorn too
 trap "echo -e '\nStopping servers...'; kill $UVICORN_PID; exit" INT
 
-# Countdown timer (10 seconds)
+# Countdown timer (3 seconds)
 echo "Waiting for uvicorn to start..."
-for i in {10..1}; do
+for i in {3..1}; do
     echo -ne "Starting in $i seconds...\r"
     sleep 1
 done
@@ -89,10 +84,4 @@ echo -e "\nServer should be ready now."
 
 # ================= START NGROK (FOREGROUND) =================
 echo "Starting ngrok tunnel on port 8000..."
-$NGROK_BIN http 8000
-[3:45 pm, 10/08/2025] +91 92505 76845: # ================= INSTALL NGROK =================
-if ! command -v ngrok &> /dev/null; then
-    NGROK_BIN=$(python3 -m pyngrok config get-path)
-else
-    NGROK_BIN=$(command -v ngrok)
-fi
+$NGROK_BIN http --url https://gannet-evident-flamingo.ngrok-free.app 8000

@@ -1,2 +1,10 @@
 venv
-__pycache__
+venv1
+venv2
+.deps_installed
+deepseek.py
+test.py
+main1.py
+llm_parser.py
+__pycache__/*.pyc
+deepseek.py
